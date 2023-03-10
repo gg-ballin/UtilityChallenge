@@ -2,15 +2,19 @@ import React from 'react';
 import {View, StyleSheet, Text} from 'react-native';
 
 interface Props {
-  navigation?: any;
   item: any;
 }
-const Item = ({navigation, item}: Props) => {
-  console.log('item!: ', item)
+const Item = ({item}: Props) => {
   return (
     <View style={styles.container}>
-      <Text>{item.name}</Text>
-      <Text>{item.color}</Text>
+      <View>
+        <Text>{item.name}</Text>
+        <Text>{item.color}</Text>
+      </View>
+      <View>
+        <Text>{item.status}</Text>
+        <Text>{item.likelihood}</Text>
+      </View>
     </View>
   );
 };
@@ -20,7 +24,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 0.4,
-    borderColor: 'red'
+    borderColor: 'red',
+    justifyContent: 'space-between',
+    flexDirection: 'row',
   },
 });
 export default Item;
