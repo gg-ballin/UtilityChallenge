@@ -6,19 +6,39 @@
  */
 
 import React, {useState} from 'react';
-import {FlatList, SafeAreaView, StyleSheet, View} from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Button from './components/Button';
 import Item from './components/Item';
 
 const URL = 'https://ba6gijdps7.execute-api.us-east-1.amazonaws.com/racers';
 
-function App(): JSX.Element {
-  const [dataList, setData] = useState();
+interface RacerProps {
+  name: string;
+  length: number;
+  color: string;
+  weight: number;
+  status: string;
+}
 
+interface DataListProps {
+  racers: RacerProps;
+}
+
+function App(): JSX.Element {
+  const [dataList, setData] = useState<DataListProps>();
+  const [globalProgress, setGlobalProgress] = useState('not yet run');
+  const [loading, setLoading] = useState(false);
   function generateRacerWinLikelihoodCalculator() {
     const delay = 7000 + Math.random() * 7000;
     const likelihoodOfRacerWinning = Math.random();
-    // debugger;
     return callback => {
       setTimeout(() => {
         callback(likelihoodOfRacerWinning);
@@ -26,18 +46,22 @@ function App(): JSX.Element {
     };
   }
   const onPressStartRace = () => {
-    const newList = {...dataList};
-    newList?.racers.map((item, index) => {
-      const auxList = {...dataList};
-      auxList.racers[index].status = 'in progress';
-      setData(auxList);
-      generateRacerWinLikelihoodCalculator();
-      auxList.racers[index].status = 'calculated';
-      setData(auxList);
-      console.log('dataList: ', dataList);
+    setGlobalProgress('races in progress');
+    const auxObjList = {...dataList};
+    dataList?.racers.forEach((item, index) => {
+      auxObjList.racers[index].status = 'in progress';
+      generateRacerWinLikelihoodCalculator()((likelihood: any) => {
+        console.log(likelihood);
+        auxObjList.racers[index].likelihood = likelihood;
+        auxObjList.racers[index].status = 'calculated';
+        setData(auxObjList);
+      });
+      dataList?.racers.sort((a, b) => b.likelihood - a.likelihood);
+      // dataList?.racers.map(item => {});
     });
   };
   const onPressFetchRacers = () => {
+    setLoading(true);
     fetch(URL, {
       method: 'GET',
       headers: {
@@ -52,8 +76,12 @@ function App(): JSX.Element {
           obj['likelihood'] = 0;
         });
         setData(json);
+        setLoading(false);
       })
-      .catch(err => console.log('error: ', err));
+      .catch(err => {
+        setLoading(false);
+        console.log('error: ', err);
+      });
   };
 
   return (
@@ -64,12 +92,32 @@ function App(): JSX.Element {
           <Button title="Fetch racers" onPress={onPressFetchRacers} />
         )}
         {dataList && <Button title="Start race" onPress={onPressStartRace} />}
+        <Text>{globalProgress}</Text>
       </View>
-      <View style={{flex: 1, width: '100%'}}>
-        <FlatList
-          data={dataList?.racers}
-          renderItem={({item, key}: any) => <Item item={item} />}
-        />
+      <View style={styles.containerList}>
+        {loading && !dataList ? (
+          <ActivityIndicator />
+        ) : (
+          <View>
+            <FlatList
+              data={dataList?.racers}
+              ListFooterComponent={
+                <Button
+                  title="Reset data"
+                  onPress={() => {
+                    setData(null);
+                    setGlobalProgress('not yet run');
+                  }}
+                  customStyle={styles.reset}
+                  textColor={'white'}
+                />
+              }
+              renderItem={({item, index}: any) => (
+                <Item item={item} index={index} />
+              )}
+            />
+          </View>
+        )}
       </View>
     </View>
   );
@@ -87,6 +135,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginBottom: 20,
     marginTop: 10,
+    alignItems: 'center',
+  },
+  containerList: {
+    flex: 1,
+    width: '100%',
+  },
+  reset: {
+    alignSelf: 'center',
+    marginTop: 10,
+    backgroundColor: 'gray',
   },
 });
 
